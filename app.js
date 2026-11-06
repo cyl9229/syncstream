@@ -12,6 +12,16 @@ let lastPacket = 0, workletStats = null, phase = "idle";
 
 function setStatus(text, kind = "") { $("status").textContent = text; $("status").className = "status " + kind; }
 
+// Diagnostics shown on screen so a screenshot tells us exactly where it stopped.
+const diag = { step: "-", offers: 0, answer: "없음", ice: "-", pcState: "-", err: "" };
+function d(k, v) { diag[k] = v; renderDiag(); }
+function renderDiag() {
+  const brokers = rdv ? rdv.links.map((l) => (l.connected ? "O" : "X")).join("") : "-";
+  $("diag").textContent = `진단: 단계=${diag.step} · 중계=${brokers} · 요청=${diag.offers}회 · 응답=${diag.answer} · ICE=${diag.ice}/${diag.pcState}` + (diag.err ? ` · 오류=${diag.err}` : "");
+}
+window.addEventListener("error", (e) => d("err", String(e.message || e).slice(0, 80)));
+window.addEventListener("unhandledrejection", (e) => d("err", String((e.reason && e.reason.message) || e.reason).slice(0, 80)));
+
 let outLatFrames = 0;
 function sendHello() {
   if (!dc || dc.readyState !== "open") return;
@@ -34,13 +44,13 @@ async function start(codeInput) {
   localStorage.setItem("code", code);
   $("code").value = formatRoomCode(code);
   stop();
-  phase = "keys"; setStatus("보안 연결 준비 중...", "warn");
+  phase = "keys"; setStatus("보안 연결 준비 중...", "warn"); d("step", "키");
   keys = await deriveRoomKeys(code);
   clientId = Math.random().toString(36).slice(2, 12);
   const answerTopic = PREFIX + keys.topicId + "/w/" + clientId;
   rdv = new Rendezvous([answerTopic], onSignal);
-  phase = "offer"; setStatus("방을 찾는 중...", "warn");
-  await makeOffer();
+  phase = "offer"; setStatus("방을 찾는 중...", "warn"); d("step", "제안준비");
+  try { await makeOffer(); } catch (e) { d("err", "offer: " + (e && e.message ? e.message : e)); }
 }
 
 function stop() {
@@ -63,7 +73,8 @@ async function makeOffer() {
   };
   dc.onmessage = (e) => onPacket(e.data);
   dc.onclose = () => { if (phase === "connected") { setStatus("연결이 끊겼어요 — 다시 연결 중...", "warn"); retry(); } };
-  pc.onconnectionstatechange = () => { if (pc && pc.connectionState === "failed") retry(); };
+  pc.onconnectionstatechange = () => { if (!pc) return; d("pcState", pc.connectionState); if (pc.connectionState === "failed") retry(); };
+  pc.oniceconnectionstatechange = () => { if (pc) d("ice", pc.iceConnectionState); };
 
   await pc.setLocalDescription(await pc.createOffer());
   await new Promise((res) => {
@@ -75,6 +86,7 @@ async function makeOffer() {
     if (answered || !rdv) return;
     const payload = await sealText(keys, JSON.stringify({ id: clientId, sdp: pc.localDescription.sdp }));
     rdv.publish(PREFIX + keys.topicId + "/w", payload);
+    d("offers", diag.offers + 1); d("step", "응답대기");
   };
   rdv.onConnected = send;
   send();
@@ -97,7 +109,7 @@ async function onSignal(topic, payload) {
   try {
     const m = JSON.parse(text);
     if (!m.sdp) return;
-    answered = true;
+    answered = true; d("answer", "받음"); d("step", "연결중");
     phase = "answer"; setStatus("상대 PC와 연결하는 중...", "warn");
     await pc.setRemoteDescription({ type: "answer", sdp: m.sdp });
   } catch { answered = false; }
@@ -189,6 +201,8 @@ $("sync").oninput = () => {
   node && node.port.postMessage({ type: "extra", ms: Number($("sync").value) });
 };
 setInterval(render, 250);
+setInterval(renderDiag, 1000);
+window.addEventListener("hashchange", () => { const c = normaliseRoomCode(decodeURIComponent(location.hash.slice(1))); if (c) start(c); });
 
 const fromLink = normaliseRoomCode(decodeURIComponent(location.hash.slice(1)));
 const saved = fromLink || localStorage.getItem("code") || "";
