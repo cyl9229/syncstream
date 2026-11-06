@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15171c">
+<title>SyncStream</title>
+<style>
+  :root { --bg:#15171c; --panel:#1f232b; --accent:#4fd1a5; --warn:#ffb454; --dim:#8b93a1; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:#fff; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+         display:flex; justify-content:center; padding: max(20px, env(safe-area-inset-top)) 16px 24px; }
+  main { width:100%; max-width:440px; }
+  h1 { font-size:24px; margin:4px 0 18px; }
+  .row { display:flex; gap:8px; }
+  input#code { flex:1; min-width:0; font-size:22px; font-weight:700; letter-spacing:1px; padding:12px 14px; border-radius:10px;
+               border:1px solid #2c313b; background:var(--panel); color:#fff; text-transform:uppercase; }
+  button { font-size:17px; font-weight:700; border:0; border-radius:10px; padding:12px 18px; background:#2c8a6e; color:#fff; }
+  #play { width:100%; margin-top:14px; padding:20px; font-size:22px; background:var(--accent); color:#0d1512; }
+  .card { background:var(--panel); border-radius:12px; padding:16px; margin-top:14px; }
+  .status { font-size:18px; font-weight:700; color:var(--dim); }
+  .status.ok { color:var(--accent); } .status.warn { color:var(--warn); }
+  .small { color:var(--dim); font-size:14px; margin-top:8px; line-height:1.5; }
+  label { display:block; color:var(--dim); font-size:14px; margin-bottom:6px; }
+  input[type=range] { width:100%; accent-color: var(--accent); }
+  .between { display:flex; justify-content:space-between; align-items:center; }
+</style>
+</head>
+<body>
+<main>
+  <h1>SyncStream</h1>
+  <div class="row">
+    <input id="code" placeholder="방 코드 (예: K7P2-QX9M)" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <button id="connect">접속</button>
+  </div>
+  <button id="play" hidden>▶ 듣기 시작</button>
+  <div class="card">
+    <div id="status" class="status">방 코드를 넣고 [접속]을 누르세요</div>
+    <div id="info" class="small"></div>
+    <div id="stats" class="small"></div>
+  </div>
+  <div class="card">
+    <div class="between"><label for="sync">화면 공유에 맞추기 (소리가 화면보다 빠르면 오른쪽으로)</label><span id="syncVal" class="small"></span></div>
+    <input id="sync" type="range" min="0" max="2000" step="10" value="0">
+  </div>
+  <p class="small">이 화면을 켜둔 채로 들으세요. 블루투스 이어폰은 기기 자체 지연이 있어서 유선 이어폰이 더 정확해요.</p>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
