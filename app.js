@@ -28,7 +28,8 @@ function header(type) {
 }
 
 async function start(codeInput) {
-  const code = normaliseRoomCode(codeInput);
+  const raw = String(codeInput || "");
+  const code = normaliseRoomCode(raw.includes("#") ? raw.slice(raw.lastIndexOf("#") + 1) : raw);
   if (!code) { setStatus("방 코드가 올바르지 않아요 (8자리)", "warn"); return; }
   localStorage.setItem("code", code);
   $("code").value = formatRoomCode(code);
